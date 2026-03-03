@@ -34,13 +34,13 @@ Here are some quick glimpses of the app in action:
     </tr>
     <tr>
       <td>
-        <img src="https://raw.githubusercontent.com/TekFed/psuedo_google_form/screenshots/home.png" alt="Form Builder Interface" width="320"/>
+        <img src="https://raw.githubusercontent.com/TekFed/psuedo_google_form/main/screenshots/home.png" alt="Form Builder Interface" width="320"/>
       </td>
       <td>
-        <img src="https://raw.githubusercontent.com/TekFed/psuedo_google_form/screenshots/desktop_preview.png" alt="Form Filling Page" width="320"/>
+        <img src="https://raw.githubusercontent.com/TekFed/psuedo_google_form/main/screenshots/desktop_preview.png" alt="Form Filling Page" width="320"/>
       </td>
       <td>
-        <img src="https://raw.githubusercontent.com/TekFed/psuedo_google_form/screenshots/responses.png" alt="Responses & Results Page" width="320"/>
+        <img src="https://raw.githubusercontent.com/TekFed/psuedo_google_form/main/screenshots/responses.png" alt="Responses & Results Page" width="320"/>
       </td>
     </tr>
   </table>

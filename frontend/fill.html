@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fill Form</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SurveyJS Modern Theme -->
+    <link href="https://unpkg.com/survey-core/defaultV2.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/survey-core/survey.core.min.js"></script>
+    <script src="https://unpkg.com/survey-js-ui/survey-js-ui.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Light custom tweaks to make it feel premium */
+        .sd-root-modern {
+            background: transparent !important;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .sd-question__title {
+            font-size: 1.1rem !important;
+            font-weight: 600 !important;
+            color: #1f2937 !important;
+        }
+        .sd-container-modern {
+            box-shadow: none !important;
+            border-radius: 16px !important;
+        }
+        .sd-page {
+            padding: 2rem !important;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-white min-h-screen py-12">
+    <div class="max-w-3xl mx-auto px-6">
+        <!-- Header -->
+        <div class="text-center mb-10">
+            <div onclick="window.location.href='index.html'" 
+                 class="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700 cursor-pointer mb-4">
+                ← Back to My Forms
+            </div>
+            <h1 id="formTitle" class="text-4xl font-semibold text-gray-900">Loading form...</h1>
+            <p id="formSubtitle" class="text-gray-500 mt-2">Please fill out the form below</p>
+        </div>
+
+        <!-- Form Card -->
+        <div class="bg-white rounded-3xl shadow-2xl overflow-hidden">
+            <div id="surveyContainer" class="p-10"></div>
+        </div>
+
+        <!-- Footer note -->
+        <p class="text-center text-xs text-gray-400 mt-8">
+            Powered by Pseudo Google Forms
+        </p>
+    </div>
+
+    <!-- Debug Panel (kept for troubleshooting) -->
+    <div id="debugPanel" class="hidden fixed bottom-6 right-6 bg-white border border-red-300 rounded-2xl shadow-2xl p-6 max-w-md w-full">
+        <div class="flex justify-between items-start">
+            <h3 class="font-bold text-red-600">Debug Info</h3>
+            <button onclick="hideDebug()" class="text-xl leading-none">×</button>
+        </div>
+        <div id="errorDetails" class="mt-4 text-sm font-mono bg-gray-100 p-4 rounded-lg overflow-auto max-h-96"></div>
+    </div>
+
+    <script>
+        const API_BASE = "http://127.0.0.1:8000/api";
+
+        async function loadAndRenderForm() {
+            const params = new URLSearchParams(window.location.search);
+            const formId = params.get("id");
+            const container = document.getElementById("surveyContainer");
+
+            if (!formId) {
+                showError("Missing Form ID", "Use fill.html?id=NUMBER");
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/forms/${formId}`);
+                if (!res.ok) throw new Error("Form not found");
+
+                const formData = await res.json();
+
+                // Update header
+                document.getElementById("formTitle").textContent = formData.title;
+                document.getElementById("formSubtitle").textContent = "Please fill out the form below";
+
+                container.innerHTML = "";
+
+                const survey = new Survey.Model(formData.form_json);
+
+                survey.onComplete.add(async (sender) => {
+                    await fetch(`${API_BASE}/forms/${formId}/responses`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ answers_json: sender.data })
+                    });
+
+                    // Beautiful thank you screen
+                    container.innerHTML = `
+                        <div class="text-center py-16">
+                            <div class="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
+                                <span class="text-5xl">✅</span>
+                            </div>
+                            <h2 class="text-4xl font-semibold text-gray-900 mb-3">Thank you!</h2>
+                            <p class="text-xl text-gray-600 mb-8">Your response has been recorded successfully.</p>
+                            <button onclick="window.location.href='index.html'" 
+                                    class="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-medium text-lg transition">
+                                Return to My Forms
+                            </button>
+                        </div>`;
+                });
+
+                survey.render(container);
+
+            } catch (err) {
+                console.error(err);
+                let msg = err.message.includes("Failed to fetch") 
+                    ? "Backend server not running. Start uvicorn first." 
+                    : err.message;
+                showError(`Failed to load form #${formId}`, msg);
+            }
+        }
+
+        function showError(title, message) {
+            const container = document.getElementById("surveyContainer");
+            container.innerHTML = `
+                <div class="text-center py-20 text-red-500">
+                    <div class="text-6xl mb-6">❌</div>
+                    <h2 class="text-3xl font-semibold">${title}</h2>
+                    <p class="mt-6 text-lg text-gray-700">${message}</p>
+                </div>`;
+        }
+
+        function showDebug() {
+            document.getElementById("debugPanel").classList.remove("hidden");
+        }
+
+        function hideDebug() {
+            document.getElementById("debugPanel").classList.add("hidden");
+        }
+
+        window.onload = loadAndRenderForm;
+    </script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Results</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://unpkg.com/survey-core/survey-core.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-5xl mx-auto pt-10 px-6">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <button onclick="window.location.href='index.html'" 
+                        class="text-indigo-600 hover:text-indigo-700 flex items-center gap-2">
+                    ← Back to My Forms
+                </button>
+                <h1 id="formTitle" class="text-3xl font-bold mt-2">Loading...</h1>
+            </div>
+            <div id="stats" class="text-right">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+
+        <!-- Results List -->
+        <div id="resultsContainer" class="bg-white rounded-3xl shadow-xl overflow-hidden">
+            <!-- Filled by JS -->
+        </div>
+    </div>
+
+    <!-- Response Detail Modal -->
+    <div id="modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+        <div class="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+            <div class="p-6 border-b flex justify-between items-center">
+                <h2 class="text-xl font-semibold">Response Details</h2>
+                <button onclick="closeModal()" class="text-3xl leading-none text-gray-400 hover:text-black">×</button>
+            </div>
+            <div id="modalContent" class="p-8 overflow-auto max-h-[70vh]">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = "http://127.0.0.1:8000/api";
+        let currentFormId = null;
+
+        async function loadResults() {
+            const params = new URLSearchParams(window.location.search);
+            currentFormId = params.get("id");
+            if (!currentFormId) {
+                document.getElementById("resultsContainer").innerHTML = `<p class="text-red-500 text-center py-20">No form ID provided</p>`;
+                return;
+            }
+
+            try {
+                // Get form title
+                const formRes = await fetch(`${API_BASE}/forms/${currentFormId}`);
+                const formData = await formRes.json();
+                document.getElementById("formTitle").innerHTML = `${formData.title} <span class="text-sm font-normal text-gray-500">— Results</span>`;
+
+                // Get responses
+                const res = await fetch(`${API_BASE}/forms/${currentFormId}/responses`);
+                const responses = await res.json();
+
+                const statsHTML = `
+                    <div class="text-5xl font-bold text-indigo-600">${responses.length}</div>
+                    <div class="text-sm text-gray-500 -mt-1">responses</div>
+                `;
+                document.getElementById("stats").innerHTML = statsHTML;
+
+                let html = `
+                    <div class="divide-y">
+                        ${responses.length === 0 
+                            ? `<div class="p-16 text-center text-gray-400">
+                                <div class="text-6xl mb-4">📭</div>
+                                <p>No responses yet. Share the form and come back!</p>
+                               </div>`
+                            : responses.map((r, index) => `
+                                <div onclick="showResponseDetail(${index})" 
+                                     class="p-6 hover:bg-gray-50 cursor-pointer flex justify-between items-center">
+                                    <div>
+                                        <div class="font-medium">Response #${responses.length - index}</div>
+                                        <div class="text-xs text-gray-500">${new Date(r.submitted_at).toLocaleString()}</div>
+                                    </div>
+                                    <div class="text-indigo-600 text-sm">View answers →</div>
+                                </div>
+                            `).join('')}
+                    </div>
+                `;
+
+                document.getElementById("resultsContainer").innerHTML = html;
+
+                // Store responses globally for modal
+                window.allResponses = responses;
+
+            } catch (e) {
+                document.getElementById("resultsContainer").innerHTML = `
+                    <p class="text-red-500 text-center py-20 text-xl">❌ Could not load results.</p>`;
+            }
+        }
+
+        function showResponseDetail(index) {
+            const response = window.allResponses[index];
+            let content = `<div class="space-y-6">`;
+            
+            Object.keys(response.answers_json).forEach(key => {
+                const value = response.answers_json[key];
+                content += `
+                    <div class="border-l-4 border-indigo-500 pl-4">
+                        <div class="text-xs uppercase tracking-widest text-gray-500">${key}</div>
+                        <div class="font-medium mt-1">${Array.isArray(value) ? value.join(", ") : value}</div>
+                    </div>`;
+            });
+
+            content += `</div>`;
+            document.getElementById("modalContent").innerHTML = content;
+            document.getElementById("modal").classList.remove("hidden");
+        }
+
+        function closeModal() {
+            document.getElementById("modal").classList.add("hidden");
+        }
+
+        // Close modal when clicking outside
+        document.getElementById("modal").addEventListener("click", function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        // Tailwind script
+        tailwind.config = { content: ["*"] };
+
+        window.onload = loadResults;
+    </script>
+</body>
+</html>
